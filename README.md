@@ -6,7 +6,7 @@ This version works only with custom version of DOME that has [PR #173](https://g
 
 ## Installation
 
-Just download the `domeworking.dll` or `domeworking.so` from the [releases page](), and put them in the base directory of your DOME game.
+Just download the `domeworking.dll` or `domeworking.so` from the [releases page](https://github.com/ChayimFriedman2/domeworking/releases/), and put them in the base directory of your DOME game.
 
 After that, in your `main.wren` file, do:
 
