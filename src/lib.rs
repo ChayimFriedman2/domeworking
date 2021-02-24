@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 use std::net;
+use std::time::Duration;
 
 use dome_cloomnik::{register_modules, Context, HookResult, WrenHandle, WrenVM};
 use once_cell::unsync::OnceCell;
@@ -108,6 +109,26 @@ impl TcpStream {
         vm.set_slot_bytes(0, &buf[..read_len]);
     }
 
+    fn read_timeout(&mut self, vm: &mut WrenVM) {
+        const FAILED_MSG: &str = "Failed to read.";
+        let timeout = vm.get_slot_double(1);
+        let timeout = Duration::from_secs_f64(timeout);
+        self.stream()
+            .set_read_timeout(Some(timeout))
+            .expect(FAILED_MSG);
+        let mut buf = [0; 65_535];
+        match self.stream().read(&mut buf) {
+            Ok(0) => {
+                // Stream closed
+                self.0.take();
+                vm.set_slot_null(0);
+            }
+            Err(_) => vm.set_slot_null(0), // Timed out
+            Ok(read_len) => vm.set_slot_bytes(0, &buf[..read_len]),
+        };
+        self.stream().set_read_timeout(None).expect(FAILED_MSG);
+    }
+
     fn write(&mut self, vm: &mut WrenVM) {
         let buf = vm.get_slot_bytes(1);
         self.stream().write_all(&buf).expect("Failed to write.");
@@ -130,6 +151,7 @@ fn on_init(mut ctx: Context) -> HookResult {
                 "construct connect(addr) {}"
                 foreign remoteAddr = remote_addr
                 foreign read() = read
+                foreign read(timeout) = read_timeout
                 foreign write(data) = write
                 // Isn't accurate
                 foreign closed = closed
